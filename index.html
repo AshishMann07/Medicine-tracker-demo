@@ -237,6 +237,10 @@
         editButton.style.display = "none";
       });
 
+      const newFeature = function () {
+        console.log("Welcome to the Application");
+      };
+
       const checkReminders = () => {
         const now = new Date();
         const day = now.getDay();
@@ -261,6 +265,7 @@
 
       loadState();
       setInterval(checkReminders, 60000);
+      newFeature();
     </script>
 
     <script>
@@ -270,7 +275,6 @@
           .then(() => console.log("✅ Service Worker Registered"))
           .catch((err) => console.error("❌ SW Registration Failed", err));
       }
-      console.log("welcome to the med tracker");
     </script>
   </body>
 </html>
