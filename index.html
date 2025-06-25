@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#3a3f51" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#2ecc71" />
+    <title>Medicine Tracker</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(120deg, #3a3f51, #5c6e91);
+        color: #fff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 2rem;
+        border-radius: 20px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        max-width: 450px;
+        width: 90%;
+        text-align: center;
+        animation: fadeIn 1s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      h1 {
+        margin-bottom: 1rem;
+        color: #ffeb3b;
+        text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+      }
+
+      .date-display {
+        margin-bottom: 1.5rem;
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+
+      label {
+        display: block;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.3s ease, transform 0.3s ease;
+      }
+
+      label:hover {
+        transform: scale(1.02);
+      }
+
+      input[type="checkbox"] {
+        transform: scale(1.5);
+        margin-right: 1rem;
+      }
+
+      .checked {
+        background: rgba(100, 255, 100, 0.2);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .history {
+        margin-top: 2rem;
+        font-size: 0.9rem;
+        text-align: left;
+        max-height: 150px;
+        overflow-y: auto;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1rem;
+        border-radius: 10px;
+      }
+
+      .chart {
+        margin-top: 1.5rem;
+        font-size: 0.9rem;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1rem;
+        border-radius: 10px;
+        overflow-x: auto;
+      }
+
+      .legend {
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        color: #ccc;
+      }
+
+      .edit-button {
+        background: #00bcd4;
+        color: #fff;
+        padding: 0.4rem 1.2rem;
+        margin-top: 0.5rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        transition: background 0.3s ease;
+      }
+
+      .edit-button:hover {
+        background: #0097a7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container" id="mainContainer">
+      <h1>Medicine Tracker</h1>
+      <div class="date-display" id="dateDisplay"></div>
+      <div id="medInputs">
+        <label id="label-thyroid">
+          <input type="checkbox" id="thyroid" />
+          Thyroid
+        </label>
+        <label id="label-slinda">
+          <input type="checkbox" id="slinda" />
+          Slinda (10:00 AM)
+        </label>
+      </div>
+      <button class="edit-button" id="editButton" style="display: none">
+        Edit
+      </button>
+      <div class="chart" id="chart"></div>
+      <div class="legend">✓ = Taken, ✗ = Missed</div>
+      <div class="history" id="historyLog"></div>
+    </div>
+
+    <script>
+      const thyroid = document.getElementById("thyroid");
+      const slinda = document.getElementById("slinda");
+      const labelThyroid = document.getElementById("label-thyroid");
+      const labelSlinda = document.getElementById("label-slinda");
+      const dateDisplay = document.getElementById("dateDisplay");
+      const historyLog = document.getElementById("historyLog");
+      const chart = document.getElementById("chart");
+      const medInputs = document.getElementById("medInputs");
+      const editButton = document.getElementById("editButton");
+
+      const today = new Date();
+      const formattedDate = today.toISOString().split("T")[0];
+      dateDisplay.textContent = `Today: ${formattedDate}`;
+
+      const saveState = () => {
+        const record = {
+          date: formattedDate,
+          thyroid: thyroid.checked,
+          slinda: slinda.checked,
+        };
+
+        let history = JSON.parse(localStorage.getItem("medHistory") || "[]");
+        history = history.filter((entry) => entry.date !== formattedDate);
+        history.push(record);
+        localStorage.setItem("medHistory", JSON.stringify(history));
+
+        localStorage.setItem("thyroid", thyroid.checked);
+        localStorage.setItem("slinda", slinda.checked);
+      };
+
+      const loadState = () => {
+        thyroid.checked = localStorage.getItem("thyroid") === "true";
+        slinda.checked = localStorage.getItem("slinda") === "true";
+        updateUI();
+        loadHistory();
+        renderChart();
+      };
+
+      const updateUI = () => {
+        labelThyroid.classList.toggle("checked", thyroid.checked);
+        labelSlinda.classList.toggle("checked", slinda.checked);
+        if (thyroid.checked && slinda.checked) {
+          medInputs.classList.add("hidden");
+          editButton.style.display = "inline-block";
+        }
+      };
+
+      const loadHistory = () => {
+        const history = JSON.parse(localStorage.getItem("medHistory") || "[]");
+        historyLog.innerHTML =
+          "<strong>History:</strong><br>" +
+          history
+            .slice()
+            .reverse()
+            .map(
+              (entry) =>
+                `${entry.date}: Thyroid - ${
+                  entry.thyroid ? "✓" : "✗"
+                }, Slinda - ${entry.slinda ? "✓" : "✗"}`
+            )
+            .join("<br>");
+      };
+
+      const renderChart = () => {
+        const history = JSON.parse(localStorage.getItem("medHistory") || "[]");
+        const recent = history.slice(-7);
+        let dates = recent.map((entry) => entry.date);
+        let thyroidRow =
+          "Thyroid: " + recent.map((e) => (e.thyroid ? "✓" : "✗")).join(" | ");
+        let slindaRow =
+          "Slinda:  " + recent.map((e) => (e.slinda ? "✓" : "✗")).join(" | ");
+        let dateRow = "Dates:   " + dates.join(" | ");
+        chart.innerHTML = `<pre>${thyroidRow}<br>${slindaRow}<br>${dateRow}</pre>`;
+      };
+
+      [thyroid, slinda].forEach((input) => {
+        input.addEventListener("change", () => {
+          updateUI();
+          saveState();
+          loadHistory();
+          renderChart();
+        });
+      });
+
+      editButton.addEventListener("click", () => {
+        medInputs.classList.remove("hidden");
+        editButton.style.display = "none";
+      });
+
+      const checkReminders = () => {
+        const now = new Date();
+        const day = now.getDay();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+
+        if ((day === 0 || day === 6) && hour === 7 && minute === 0) {
+          alert("Reminder: Take 2 tablets of Thyroid today (Weekend dosage)");
+        } else if (hour === 7 && minute === 0) {
+          alert("⏰ Reminder: Take your Thyroid medicine now.");
+        }
+
+        if (hour === 10 && minute === 0) {
+          alert("⏰ Reminder: Time to take your Slinda medicine!");
+        }
+
+        const hydrationHours = [9, 12, 15, 18];
+        if (hydrationHours.includes(hour) && minute === 0) {
+          alert("💧 Time to drink water and stay hydrated!");
+        }
+      };
+
+      loadState();
+      setInterval(checkReminders, 60000);
+    </script>
+
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("sw.js")
+          .then(() => console.log("✅ Service Worker Registered"))
+          .catch((err) => console.error("❌ SW Registration Failed", err));
+      }
+      console.log("welcome to the med tracker");
+    </script>
+  </body>
+</html>
